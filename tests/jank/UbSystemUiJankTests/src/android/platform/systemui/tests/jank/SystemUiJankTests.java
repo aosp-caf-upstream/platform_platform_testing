@@ -16,18 +16,16 @@
 
 package android.platform.systemui.tests.jank;
 
+import static android.system.helpers.OverviewHelper.isRecentsInLauncher;
+
 import android.app.Notification.Action;
 import android.app.Notification.Builder;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.RemoteInput;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.graphics.Point;
 import android.graphics.Rect;
-import android.content.res.Resources;
 import android.graphics.drawable.Icon;
 import android.os.Bundle;
 import android.os.Environment;
@@ -54,6 +52,7 @@ import android.widget.ImageView;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class SystemUiJankTests extends JankTestBase {
@@ -165,7 +164,7 @@ public class SystemUiJankTests extends JankTestBase {
     }
 
     public static void openRecents(Context context, UiDevice device) {
-        if (isRecentsInLauncher(context)) {
+        if (isRecentsInLauncher()) {
             // Swipe from the Home button to approximately center of the screen.
             UiObject2 homeButton = device.findObject(By.res(SYSTEMUI_PACKAGE, "home_button"));
             homeButton.setGestureMargins(0, -homeButton.getVisibleBounds().bottom / 2, 0, 1);
@@ -180,7 +179,7 @@ public class SystemUiJankTests extends JankTestBase {
 
         // use a long timeout to wait until recents populated
         if (device.wait(
-                Until.findObject(isRecentsInLauncher(context)
+                Until.findObject(isRecentsInLauncher()
                         ? getLauncherOverviewSelector(device) : RECENTS),
                 10000) == null) {
             fail("Recents didn't appear");
@@ -287,27 +286,6 @@ public class SystemUiJankTests extends JankTestBase {
     }
 
     /**
-     * Returns whether recents (overview) is implemented in Launcher.
-     */
-    private static boolean isRecentsInLauncher(Context context) {
-        final PackageManager pm = context.getPackageManager();
-        try {
-            final Resources resources = pm.getResourcesForApplication(SYSTEMUI_PACKAGE);
-            int id = resources.getIdentifier("config_overviewServiceComponent", "string",
-                    SYSTEMUI_PACKAGE);
-            pm.getServiceInfo(
-                    ComponentName.unflattenFromString(resources.getString(id)), 0);
-            return true;
-        } catch (PackageManager.NameNotFoundException e) {
-            return false;
-        }
-    }
-
-    private boolean isRecentsInLauncher() {
-        return isRecentsInLauncher(getInstrumentation().getTargetContext());
-    }
-
-    /**
      * Returns the package that provides Recents.
      */
     public String getPackageForRecents() {
@@ -364,18 +342,15 @@ public class SystemUiJankTests extends JankTestBase {
                     fail("Unable to find a task to dismiss");
                 }
 
-                // taskViews contains up to 3 task views: the 'main' (and the tallest) one in the
-                // center, and parts of its right and left siblings. Find the main task view by
-                // its upper edge's coordinate.
-                UiObject2 tallestTask = null;
-                for (UiObject2 o : taskViews) {
-                    if (tallestTask == null
-                            || o.getVisibleBounds().top < tallestTask.getVisibleBounds().top) {
-                        tallestTask = o;
-                    }
-                }
+                // taskViews contains up to 3 task views: the 'main' (having the widest visible
+                // part) one in the center, and parts of its right and left siblings. Find the
+                // main task view by its width.
+                final UiObject2 widestTask = Collections.max(taskViews,
+                        (t1, t2) -> Integer.compare(t1.getVisibleBounds().width(),
+                                t2.getVisibleBounds().width()));
+
                 // Dismiss the task via flinging it up.
-                tallestTask.fling(Direction.DOWN);
+                widestTask.fling(Direction.DOWN);
                 mDevice.waitForIdle();
             }
 
