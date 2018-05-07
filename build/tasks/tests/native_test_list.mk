@@ -32,6 +32,8 @@ native_tests := \
     dumpstate_test_fixture \
     dumpsys_test \
     dvr_api-test \
+    dvr_buffer_queue-test \
+    dvr_display-test \
     gatekeeperd-unit-tests \
     hello_world_test \
     hwui_unit_tests \
@@ -77,6 +79,7 @@ native_tests := \
     mj_system_unittest_gtest \
     mj_util_unittest_gtest \
     mtp_ffs_handle_test \
+    net_test_avrcp \
     net_test_bluetooth \
     net_test_bta \
     net_test_btcore \
